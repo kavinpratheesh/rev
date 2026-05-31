@@ -385,6 +385,29 @@ body {
   color: var(--gold); text-transform: uppercase;
 }
 
+/* MUSIC CONTROL FLOAT BUTTON */
+.music-control-btn {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--cream);
+  border: 1.5px solid var(--gold);
+  display: none; /* Flex initialized upon opening */
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  z-index: 250;
+}
+.music-control-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--purple-deep);
+}
+
 /* ANIMATIONS */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(24px); }
@@ -414,6 +437,14 @@ body {
 </style>
 </head>
 <body>
+
+<audio id="weddingBgm" loop src="wedding-bgm.mp3"></audio>
+
+<div id="musicControlBtn" class="music-control-btn" onclick="toggleMusic()">
+  <svg id="musicControlIcon" viewBox="0 0 24 24">
+    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+  </svg>
+</div>
 
 <div class="petals-layer" id="petalsLayer"></div>
 
@@ -746,7 +777,7 @@ body {
     </div>
 
   </div></div><script>
-// Gold speckles on landing
+// Gold speckles on landing page background
 (function(){
   const c = document.getElementById('speckles');
   for(let i=0;i<40;i++){
@@ -765,7 +796,7 @@ body {
   }
 })();
 
-// Floating petals
+// Floating purple petals animation engine
 function spawnPetals(){
   const layer = document.getElementById('petalsLayer');
   const colors = ['#8b4fc8','#9b6fd0','#b890e0','#c9a96e','#d8b8f0','#6b3fa0','#e0c0f0'];
@@ -788,63 +819,55 @@ function spawnPetals(){
   }
 }
 
-// BGM using Web Audio
-let audioCtx, bgmTimer, bgmOn = false;
+// ===== OPTION A: SIMPLIFIED AUDIO CORE JS LOGIC =====
+const weddingAudio = document.getElementById('weddingBgm');
+const musicBtn = document.getElementById('musicControlBtn');
+const musicIcon = document.getElementById('musicControlIcon');
+
 function playBGM(){
-  if(bgmOn) return;
-  bgmOn = true;
-  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  const master = audioCtx.createGain();
-  master.gain.setValueAtTime(0.18, audioCtx.currentTime);
-  master.connect(audioCtx.destination);
+  weddingAudio.play().then(() => {
+    musicBtn.style.display = 'flex'; // Display controller once music safely boots
+  }).catch(err => {
+    console.log("Audio waiting on manual toggle initiation due to browser policy block.");
+    musicBtn.style.display = 'flex'; 
+    updateIconState(true); // default to a visual mute layout until user clicks
+  });
+}
 
-  function note(f,s,d,v=1){
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.connect(g); g.connect(master);
-    o.type = 'sine';
-    o.frequency.value = f;
-    const t = audioCtx.currentTime + s;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(v, t+0.12);
-    g.gain.setValueAtTime(v, t+d-0.15);
-    g.gain.linearRampToValueAtTime(0, t+d);
-    o.start(t); o.stop(t+d);
+function toggleMusic() {
+  if (weddingAudio.paused) {
+    weddingAudio.play();
+    updateIconState(false);
+  } else {
+    weddingAudio.pause();
+    updateIconState(true);
   }
+}
 
-  // Gentle pentatonic melody loop
-  const loop = () => {
-    const seq = [
-      [261.6,0,.7],[293.7,.7,.5],[329.6,1.2,1],[293.7,2.2,.5],[246.9,2.7,.6],
-      [261.6,3.3,.8],[220,4.1,.6],[246.9,4.7,.5],[261.6,5.2,1.2],
-      [329.6,6.4,.6],[349.2,7,.5],[392,7.5,1.2],[349.2,8.7,.5],[329.6,9.2,.6],
-      [293.7,9.8,.8],[261.6,10.6,2],
-    ];
-    const bass = [
-      [130.8,0,2.4,0.5],[110,2.4,2.4,0.5],[123.5,4.8,2.4,0.5],
-      [130.8,7.2,2.4,0.5],[146.8,9.6,3,0.5],
-    ];
-    seq.forEach(([f,s,d])=>note(f,s,d,0.7));
-    bass.forEach(([f,s,d,v])=>note(f,s,d,v));
-    bgmTimer = setTimeout(loop, 12800);
-  };
-  loop();
+function updateIconState(isMuted) {
+  if (isMuted) {
+    // Vector variant path for "Muted / Crossed Speaker"
+    musicIcon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+  } else {
+    // Vector variant path for "Active Playing Waves Speaker"
+    musicIcon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+  }
 }
 
 function openInvite(){
-  // Start BGM
+  // Initialize and target mp3 stream file
   playBGM();
   spawnPetals();
 
-  // Hide landing
+  // Hide landing screen overlay
   document.getElementById('landing').classList.add('away');
 
-  // Show invitation
+  // Show primary invitation element
   const inv = document.getElementById('invitation');
   inv.classList.add('show');
   setTimeout(()=>inv.classList.add('visible'), 80);
 
-  // Scroll animations
+  // Lazy execution framework for scroll reveal layout
   setTimeout(()=>{
     const obs = new IntersectionObserver(entries=>{
       entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('on'); obs.unobserve(e.target); } });
@@ -852,7 +875,7 @@ function openInvite(){
     document.querySelectorAll('.fi').forEach(el=>obs.observe(el));
   }, 600);
 
-  // Countdown
+  // Initialize countdown loops
   countdown();
 }
 
